@@ -97,42 +97,72 @@ def get_battery(event: threading.Event):
 def create_battery_icon():
     global battery_level
     global battery_charging
+    global icon
     image = Image.new("RGB", (100, 100), color="white")
     draw = ImageDraw.Draw(image)
 
     draw.rectangle((0, 0, 100, 100), fill="black")
     error = load_image("no_error")
 
+    def process_image(image):
+        image.paste(error, (0, 0), error)
+        image = image.convert("RGBA")
+        data = image.getdata()
+        new_data = []
+        for item in data:
+            if item[0] == 0 and item[1] == 0 and item[2] == 0:
+                new_data.append((255, 255, 255, 0))
+            else:
+                new_data.append(item)
+        image.putdata(new_data)
+        return image
+
     def draw_battery_indicator(color, level):
         draw.rectangle((0, 0, 100, 100), fill="black")
         draw.rectangle((0, 100 - level, 100, 100), fill=color)
 
+    def draw_battery_full(color, level):
+        for i in range(5):
+            draw.rectangle((0, 0, 100, 100), fill="black")
+            icon.icon = process_image(image)
+            time.sleep(0.5)
+            draw.rectangle((0, 100 - level, 100, 100), fill=color)
+            icon.icon = process_image(image)
+            time.sleep(1)
+
+
+    def draw_battery_charging(color, level):
+        draw.rectangle((0, 0, 100, 100), fill="black")
+        for i in range(1,level):
+            draw.rectangle((0, 0, 100 -i, 100), fill=color)
+            icon.icon = process_image(image)
+            time.sleep(0.1)
+           
+        draw.rectangle((0, 100 - level, 100, 100), fill=color)
+
     if battery_level is not None:
         if battery_charging:
-            draw_battery_indicator("orange", battery_level)
+            if battery_level >= 100:
+                draw_battery_full("Magenta", battery_level)
+                draw_battery_indicator("Magenta", battery_level)
+                
+            else:
+                draw_battery_charging("orange", battery_level)
+                draw_battery_indicator("orange", battery_level)
+                
         else:
-            if battery_level < 20:
+            if battery_level <= 5:
                 draw_battery_indicator("red", battery_level)
-            elif battery_level < 50:
+            elif battery_level <= 20:
                 draw_battery_indicator("yellow", battery_level)
             else:
                 draw_battery_indicator("green", battery_level)
     else:
         error = load_image("error")
 
-    image.paste(error, (0, 0), error)
+    
 
-    image = image.convert("RGBA")
-    data = image.getdata()
-    new_data = []
-    for item in data:
-        if item[0] == 0 and item[1] == 0 and item[2] == 0:
-            new_data.append((255, 255, 255, 0))
-        else:
-            new_data.append(item)
-    image.putdata(new_data)
-
-    return image
+    return process_image(image)
 
 
 def refresh_connection():
